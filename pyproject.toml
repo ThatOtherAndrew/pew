@@ -5,3 +5,10 @@ description = "A program execution wrapper for a more consistent experience on n
 readme = "README.md"
 requires-python = ">=3.9"
 dependencies = []
+
+[project.scripts]
+pew = "pew.pew:main"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
