@@ -1,7 +1,7 @@
 [project]
 name = "pew"
 version = "0.1.0"
-description = "Add your description here"
+description = "A program execution wrapper for a more consistent experience on networked computers without root permissions"
 readme = "README.md"
 requires-python = ">=3.9"
 dependencies = []
