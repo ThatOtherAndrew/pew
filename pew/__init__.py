@@ -1,1 +1,1 @@
-from .pew import main
+from pew.pew import main as main

@@ -4,7 +4,9 @@ version = "0.1.0"
 description = "A program execution wrapper for a more consistent experience on networked computers without root permissions"
 readme = "README.md"
 requires-python = ">=3.9"
-dependencies = []
+dependencies = [
+    "rich>=13.8.1",
+]
 
 [project.scripts]
 pew = "pew.pew:main"
@@ -12,3 +14,8 @@ pew = "pew.pew:main"
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"
+
+[tool.uv]
+dev-dependencies = [
+    "ruff>=0.6.8",
+]
