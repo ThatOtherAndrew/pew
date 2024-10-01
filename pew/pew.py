@@ -1,5 +1,5 @@
 import importlib.metadata
-import subprocess
+import os
 import sys
 
 from rich.console import Console
@@ -35,5 +35,4 @@ def main() -> None:
     command_string.truncate(max(console.width - 10, 16), overflow='ellipsis')
     console.print(command_string)
 
-    completed_process = subprocess.run(sys.argv[1:], input=pipe_data)
-    exit(completed_process.returncode)
+    os.execvp(sys.argv[1], sys.argv[1:])
