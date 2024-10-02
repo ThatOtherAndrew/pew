@@ -11,10 +11,7 @@ from rich.text import Text
 from .module import get_modules
 
 
-def render_command(command: list[str] | None) -> Text:
-    if command is None:
-        return Text.from_markup('[dim cyan]pew:[/] [cyan]end processing[/]')
-
+def render_command(command: list[str]) -> Text:
     command_string = Text.from_markup('[dim cyan]pew:[/] ')
 
     command_string.append(command[0], style='bold yellow')
@@ -48,13 +45,20 @@ def main() -> None:
     console.print(rendered_cmd)
 
     for module in get_modules():
-        if module.match(command):
-            console.print(f'[dim cyan]pew:[/] [cyan]match[/] [bold magenta]{module.__class__.__name__}[/]')
-            command = module.hook(command)
+        try:
+            new_command = module.hook(command)
+        except SystemExit as exit_exc:
+            console.print('[dim cyan]pew:[/] [red]end processing[/]')
+            raise exit_exc
+
+        if new_command is not None:
+            command = new_command
             rendered_cmd = render_command(command)
             rendered_cmd.truncate(max(console.width - 10, 16), overflow='ellipsis')
             console.print(rendered_cmd)
-            if command is None:
-                sys.exit()
 
-    os.execvp(command[0], command)
+    try:
+        os.execvp(command[0], command)
+    except FileNotFoundError:
+        console.print('[dim cyan]pew:[/] [bold red]command not found[/]')
+        sys.exit(127)
