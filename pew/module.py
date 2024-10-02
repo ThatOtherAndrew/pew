@@ -1,6 +1,8 @@
 from __future__ import annotations
 
+import os
 from abc import ABC, abstractmethod
+from pathlib import Path
 
 import rich
 
@@ -20,12 +22,13 @@ class Module(ABC):
         pass
 
 
-class TestModule(Module):
+class SameDirExecutable(Module):
     def hook(self, command: list[str]) -> list[str] | None:
-        if command[0] == 'test':
-            self.log('Yippee!')
-        return
+        location = Path(command[0])
+        if location.is_file() and os.access(location, os.X_OK):
+            self.log('matching executable name found in current directory')
+            return ['./' + location.resolve().relative_to(Path.cwd()).as_posix(), *command[1:]]
 
 
 def get_modules() -> tuple[Module, ...]:
-    return TestModule(),
+    return SameDirExecutable(),
