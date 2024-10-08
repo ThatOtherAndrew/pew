@@ -3,6 +3,7 @@ from __future__ import annotations
 import importlib.metadata
 import os
 import sys
+from difflib import SequenceMatcher
 
 from rich.console import Console
 from rich.panel import Panel
@@ -11,8 +12,12 @@ from rich.text import Text
 from .module import get_modules
 
 
-def render_command(command: list[str]) -> Text:
+def render_command(command: list[str], old_command: list[str] | None = None) -> Text:
     command_string = Text.from_markup('[dim cyan]pew:[/] ')
+
+    if old_command is not None:
+        SequenceMatcher(a=old_command, b=command)
+        # TODO
 
     command_string.append(command[0], style='bold yellow')
     for argument in command[1:]:
@@ -44,18 +49,22 @@ def main() -> None:
     rendered_cmd.truncate(max(console.width - 10, 16), overflow='ellipsis')
     console.print(rendered_cmd)
 
-    for module in get_modules():
-        try:
-            new_command = module.hook(command)
-        except SystemExit as exit_exc:
-            console.print('[dim cyan]pew:[/] [red]end processing[/]')
-            raise exit_exc
+    try:
+        for module in get_modules():
+            try:
+                new_command = module.hook(command)
+            except SystemExit as exit_exc:
+                console.print('[dim cyan]pew:[/] [red]end processing[/]')
+                raise exit_exc
 
-        if new_command is not None:
-            command = new_command
-            rendered_cmd = render_command(command)
-            rendered_cmd.truncate(max(console.width - 10, 16), overflow='ellipsis')
-            console.print(rendered_cmd)
+            if new_command is not None:
+                rendered_cmd = render_command(new_command, command)
+                rendered_cmd.truncate(max(console.width - 10, 16), overflow='ellipsis')
+                console.print(rendered_cmd)
+                command = new_command
+    except KeyboardInterrupt:
+        console.print('\n[dim cyan]pew:[/] [red]KeyboardInterrupt[/]')
+        sys.exit(130)
 
     try:
         os.execvp(command[0], command)
