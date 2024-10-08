@@ -17,7 +17,7 @@ def render_command(command: list[str], old_command: list[str] | None = None) -> 
 
     if old_command is not None:
         SequenceMatcher(a=old_command, b=command)
-        # TODO
+        # TODO: have a pretty little command diff render
 
     command_string.append(command[0], style='bold yellow')
     for argument in command[1:]:
