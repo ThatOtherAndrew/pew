@@ -3,6 +3,7 @@ from __future__ import annotations
 import os
 import shutil
 import stat
+import subprocess
 from abc import ABC, abstractmethod
 from pathlib import Path
 from textwrap import dedent
@@ -92,6 +93,7 @@ class Nix(Module):
                 file.write(dedent('''
                     extra-experimental-features = nix-command flakes
                     ssl-cert-file = /etc/pki/tls/cert.pem
+                    sandbox = false
                 ''').lstrip())
 
         self.log(f'[green]Successfully installed nix to [yellow]{bin_path}')
@@ -105,6 +107,17 @@ class Nix(Module):
             else:
                 self.log('Run [yellow][dim]pew[/] nix[/] to install')
                 return command
+
+        if command[0] == 'nix':
+            return command
+
+        result = subprocess.run(['nix', 'search', '--json', 'nixpkgs#' + command[0]], capture_output=True)
+        if result.returncode:
+            self.log(result.stderr.decode())
+
+        self.log('[green]Command match found in nixpkgs!')
+        if Confirm.ask(f'Run [yellow][dim]nixpkgs#[/]{command[0]}[/]?', default=True):
+            return ['nix', 'run', 'nixpkgs#' + command[0], '--', *command[1:]]
 
         return command
 
