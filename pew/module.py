@@ -6,13 +6,11 @@ import stat
 import subprocess
 from abc import ABC, abstractmethod
 from pathlib import Path
-from textwrap import dedent
 
 import httpx
 import rich
-from pygments.lexer import default
 from rich.progress import Progress
-from rich.prompt import Confirm, PromptBase, PromptType, InvalidResponse
+from rich.prompt import Confirm, PromptBase, InvalidResponse
 
 
 class Module(ABC):
@@ -66,54 +64,48 @@ class Nix(Module):
             return path
 
     def _install_nix(self) -> None:
-        self.log('Installing Nix...')
+        self.log('Installing nix-portable...')
 
-        installation_path = self.PathPrompt.ask('Nix installation path [prompt.default](/usr/bin)')
+        installation_path = self.PathPrompt.ask('nix-portable installation path [prompt.default](/usr/bin)')
         installation_path.mkdir(parents=True, exist_ok=True)
-        bin_path = installation_path / 'nix'
+        bin_path = installation_path / 'nix-portable'
+        architecture = os.uname().machine
 
         with Progress() as progress:
             with httpx.stream(
                 method='GET',
-                url='https://hydra.nixos.org/job/nix/maintenance-2.18/buildStatic.x86_64-linux/latest/download-by-type/file/binary-dist',
+                url=f'https://github.com/DavHau/nix-portable/releases/latest/download/nix-portable-{architecture}',
                 follow_redirects=True,
             ) as response:
-                task = progress.add_task('[cyan]Downloading nix v2.18...', total=None)
+                task = progress.add_task(
+                    '[cyan]Downloading nix-portable...',
+                    total=int(response.headers['Content-Length']),
+                )
                 with bin_path.open('wb') as file:
                     for chunk in response.iter_bytes():
                         file.write(chunk)
                         progress.update(task, advance=len(chunk))
+            (installation_path / 'nix').symlink_to(bin_path)
             bin_path.chmod(bin_path.stat().st_mode | stat.S_IEXEC)
 
-        if not (Path.home() / '.config/nix/nix.conf').is_file():
-            self.log('Creating new nix.conf file')
-            nix_conf_dir = Path.home() / '.config/nix'
-            nix_conf_dir.mkdir(parents=True, exist_ok=True)
-            with (nix_conf_dir / 'nix.conf').open('w') as file:
-                file.write(dedent('''
-                    extra-experimental-features = nix-command flakes
-                    ssl-cert-file = /etc/pki/tls/cert.pem
-                    sandbox = false
-                ''').lstrip())
-
-        self.log(f'[green]Successfully installed nix to [yellow]{bin_path}')
+        self.log(f'[green]Successfully installed nix-portable to [yellow]{bin_path}')
 
     def hook(self, command: list[str]) -> list[str] | None:
         if shutil.which('nix') is None:
-            self.log('nix not found')
             if command[0] == 'nix':
-                if Confirm.ask('Attempt automatic Nix installation?', default=True):
+                self.log('nix not found')
+                if Confirm.ask('Attempt automatic nix-portable installation?', default=True):
                     self._install_nix()
             else:
-                self.log('Run [yellow][dim]pew[/] nix[/] to install')
+                self.log('nix not found - run [yellow][dim]pew[/] nix[/] to install')
                 return command
 
         if command[0] == 'nix':
             return command
 
-        result = subprocess.run(['nix', 'search', '--json', 'nixpkgs#' + command[0]], capture_output=True)
+        result = subprocess.run(['nix', 'search', 'nixpkgs#' + command[0], '^'], capture_output=True)
         if result.returncode:
-            self.log(result.stderr.decode())
+            return command
 
         self.log('[green]Command match found in nixpkgs!')
         if Confirm.ask(f'Run [yellow][dim]nixpkgs#[/]{command[0]}[/]?', default=True):
