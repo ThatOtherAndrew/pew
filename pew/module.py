@@ -109,7 +109,10 @@ class Nix(Module):
 
         self.log('[green]Command match found in nixpkgs!')
         if Confirm.ask(f'Run [yellow][dim]nixpkgs#[/]{command[0]}[/]?', default=True):
-            return ['nix', 'run', 'nixpkgs#' + command[0], '--', *command[1:]]
+            new_command = ['nix', 'run', 'nixpkgs#' + command[0]]
+            if len(command) > 1:
+                new_command.extend(['--', *command[1:]])
+            return new_command
 
         return command
 
