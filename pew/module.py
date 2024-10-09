@@ -33,9 +33,9 @@ class Module(ABC):
 class SameDirExecutable(Module):
     def hook(self, command: list[str]) -> list[str] | None:
         location = Path(command[0])
-        if location.is_file() and os.access(location, os.X_OK):
-            self.log('matching executable name found in current directory')
-            return ['./' + location.resolve().relative_to(Path.cwd()).as_posix(), *command[1:]]
+        if location.absolute().parent == Path.cwd() and location.is_file() and os.access(location, os.X_OK):
+            self.log('Matching executable name found in current directory')
+            return ['./' + command[0], *command[1:]]
 
 
 class Nix(Module):
