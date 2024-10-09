@@ -4,6 +4,7 @@ import os
 import shutil
 import stat
 import subprocess
+import sys
 from abc import ABC, abstractmethod
 from pathlib import Path
 
@@ -26,6 +27,15 @@ class Module(ABC):
         :raises SystemExit: Terminate early without any further processing or execution of the command.
         """
         pass
+
+
+class ShellInit(Module):
+    def hook(self, command: list[str]) -> list[str] | None:
+        if command != ['init']:
+            return
+
+        sys.stdout.write('command_not_found_handle() { pew "$@"; } # bash')
+        raise SystemExit
 
 
 class SameDirExecutable(Module):
@@ -98,14 +108,15 @@ class Nix(Module):
                     self._install_nix()
             else:
                 self.log('nix not found - run [yellow][dim]pew[/] nix[/] to install')
-                return command
+                return
 
         if command[0] == 'nix':
-            return command
+            return
 
+        self.log('searching nixpkgs... [dim](please be patient, cold runs may take a while!)')
         result = subprocess.run(['nix', 'search', 'nixpkgs#' + command[0], '^'], capture_output=True)
         if result.returncode:
-            return command
+            return
 
         self.log('[green]Command match found in nixpkgs!')
         if Confirm.ask(f'Run [yellow][dim]nixpkgs#[/]{command[0]}[/]?', default=True):
@@ -114,8 +125,6 @@ class Nix(Module):
                 new_command.extend(['--', *command[1:]])
             return new_command
 
-        return command
-
 
 def get_modules() -> tuple[Module, ...]:
-    return SameDirExecutable(), Nix()
+    return ShellInit(), SameDirExecutable(), Nix()
